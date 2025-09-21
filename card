@@ -1,0 +1,365 @@
+type: horizontal-stack
+cards:
+  - type: custom:button-card
+    styles:
+      card:
+        - width: >
+            [[[ return states['input_boolean.show_heating_controls'].state ===
+            'on' ? '0px' : '30px'; ]]]
+        - background: transparent
+        - box-shadow: none
+        - border: none
+        - pointer-events: none
+    tap_action:
+      action: none
+  - type: custom:button-card
+    entity: input_boolean.heating
+    show_name: false
+    show_state: false
+    show_icon: false
+    tap_action: >
+      [[[ return states['input_boolean.show_heating_controls'].state === 'on' ? 
+      { action: 'none' } : { action: 'toggle' }; ]]]
+    hold_action:
+      action: call-service
+      service: input_boolean.toggle
+      service_data:
+        entity_id: input_boolean.show_heating_controls
+    styles:
+      card:
+        - position: relative
+        - height: 310px
+        - width: 130px
+        - background: transparent
+        - box-shadow: none
+        - border: none
+        - z-index: 2
+    custom_fields:
+      thermometer: |
+        [[[ 
+          const currentTemp = Number(states['sensor.tado_smart_thermostat_su4238890496_current_temperature'].state);
+          const secondTemp = Number(states['input_number.heating_temp'].state);
+          const heatingState = states['input_boolean.heating'].state;
+
+          const min = -30;
+          const max = 40;
+          const percent = Math.min(Math.max((currentTemp - min) / (max - min) * 100, 0), 100);
+          const secondPercent = Math.min(Math.max((secondTemp - min) / (max - min) * 100, 0), 100);
+
+          const usableHeight = 185;
+          const bottomOffset = 61;
+          const stemWidth = 8;
+          const bulbSize = 36;
+          const bulbLift = -30;
+          const secondHeight = usableHeight * (secondPercent / 100);
+
+          const bulbColor = heatingState === 'on' ? '#ff0000' : '#00f';
+          const gradient = heatingState === 'on'
+            ? 'linear-gradient(to top, rgba(255,0,0,0.8) 0%, rgba(0,0,255,0.6) 20%, rgba(0,255,255,0.6) 50%, rgba(0,255,0,0.6) 70%, rgba(255,255,0,0.6) 85%, rgba(255,0,0,0.6) 100%)'
+            : 'linear-gradient(to top, rgba(0,0,255,0.6) 5%, rgba(0,255,255,0.6) 50%, rgba(0,255,0,0.6) 85%, rgba(255,255,0,0.6) 70%, rgba(255,0,0,0.6) 100%)';
+
+          const uid = 't' + Math.random().toString(36).slice(2,7);
+
+          return `
+            <style>
+              @keyframes bubble-rise-${uid} {
+                0%   { transform: translateY(100%) scale(0.5); opacity: 0; }
+                25%  { opacity: .9; }
+                100% { transform: translateY(-250%) scale(1.2); opacity: 0; }
+              }
+              @keyframes bulb-bubble-${uid} {
+                0%   { transform: translateY(60%) scale(0.4); opacity: 0; }
+                35%  { opacity: .85; }
+                100% { transform: translateY(-60%) scale(1.2); opacity: 0; }
+              }
+              .${uid}-bubble {
+                position: absolute;
+                bottom: 0;
+                width: 8px; height: 8px;
+                border-radius: 50%;
+                background: rgba(255,60,60,0.9);
+                filter: drop-shadow(0 0 4px rgba(255,70,70,0.9));
+                animation: bubble-rise-${uid} 2.4s infinite ease-in;
+                pointer-events: none;
+              }
+              .${uid}-bubble.small { width: 6px; height: 6px; }
+              .${uid}-bubble.tiny  { width: 4px; height: 4px; }
+              .${uid}-bulb-bubble {
+                position: absolute;
+                bottom: 10%;
+                left: 50%;
+                width: 8px; height: 8px;
+                border-radius: 50%;
+                background: rgba(255,60,60,0.85);
+                filter: drop-shadow(0 0 4px rgba(255,70,70,0.9));
+                animation: bulb-bubble-${uid} 1.8s infinite ease-in;
+                pointer-events: none;
+              }
+            </style>
+
+            <div style="position:absolute;bottom:${bottomOffset + bulbLift}px;left:50%;transform:translateX(-50%);
+              width:${bulbSize}px;height:${bulbSize}px;border-radius:50%;background:${bulbColor};z-index:0;overflow:hidden;">
+              ${
+                heatingState === 'on' ? `
+                  <div class="${uid}-bulb-bubble" style="left:35%; animation-delay: 0s;"></div>
+                  <div class="${uid}-bulb-bubble" style="left:-20%; width:46px;height:46px; animation-delay: .4s;"></div>
+                  <div class="${uid}-bulb-bubble" style="left:45%; width:36px;height:36px; animation-delay: .6s;"></div>
+                  <div class="${uid}-bulb-bubble" style="left:25%; width:26px;height:26px; animation-delay: .8s;"></div>
+                  <div class="${uid}-bulb-bubble" style="left:45%; width:36px; height:36px; background: rgba(255,220,0,0.1); filter: drop-shadow(0 0 6px rgba(255,240,100,0.9)); animation-delay: 1s;"></div>
+                  <div class="${uid}-bulb-bubble" style="left:-45%; width:36px; height:36px; background: rgba(255,220,0,0.1); filter: drop-shadow(0 0 6px rgba(255,240,200,0.29)); animation-delay: 1s;"></div>
+                  <div class="${uid}-bulb-bubble" style="right: 35%; width:16px; height:36px; background: rgba(255,220,0,0.1); filter: drop-shadow(0 0 6px rgba(255,240,100,0.9)); animation-delay: 1.2s;"></div>
+                  <div class="${uid}-bulb-bubble" style="left:-35%; width:26
+                  0px; height: 20px; background: rgba(128,128,120,0.2); filter: drop-shadow(0 0 6px rgba(255,240,200,1)); animation-delay: 1.6s;"></div>
+
+                ` : ``
+              }
+            </div>
+
+            <div style="position:absolute;bottom:${bottomOffset}px;left:50%;transform:translateX(-50%);
+              width:${stemWidth}%;height:${usableHeight}px;overflow:hidden;border-radius:50px;z-index:0;">
+              
+              <div style="position:absolute;bottom:0;left:0;width:100%;height:${usableHeight}px;
+                background:${gradient};
+                clip-path:inset(${100 - percent}% 0 0 0);
+                transition: clip-path 0.5s ease;"></div>
+
+              ${
+                heatingState === 'on' ? `
+                <div style="position:absolute;bottom:0;left:0;width:100%;height:${usableHeight}px;
+                    clip-path:inset(${100 - percent}% 0 0 0); pointer-events:none;">
+                  <span class="${uid}-bubble" style="left:15%; animation-delay: .0s;  animation-duration: 2.0s;"></span>
+                  <span class="${uid}-bubble small" style="left:30%; animation-delay: .3s;  animation-duration: 2.6s;"></span>
+                  <span class="${uid}-bubble" style="left:50%; animation-delay: .6s;  animation-duration: 2.2s;"></span>
+                  <span class="${uid}-bubble tiny"  style="left:70%; animation-delay: .9s;  animation-duration: 2.8s;"></span>
+                  <span class="${uid}-bubble small" style="left:85%; animation-delay: 1.2s; animation-duration: 2.4s;"></span>
+                  <span class="${uid}-bubble" style="left:40%; animation-delay: 1.5s; animation-duration: 2.0s;"></span>
+                  <span class="${uid}-bubble tiny"  style="left:82%; animation-delay: 1.8s; animation-duration: 3.0s;"></span>
+                  <span class="${uid}-bubble small" style="left:22%; animation-delay: 2.1s; animation-duration: 2.2s;"></span>
+                </div>
+                ` : ``
+              }
+
+              <div style="position:absolute;bottom:${secondHeight}px;left:0;width:100%;height:2px;
+                background:red;z-index:1;"></div>
+            </div>
+
+            <div style="position:absolute;top:0;left:0;width:100%;height:100%;
+              background-image:url('/local/Black Thermometer.png');background-size:contain;
+              background-repeat:no-repeat;background-position:center;pointer-events:none;z-index:0;"></div>
+          `;
+        ]]]
+    custom_fields_style:
+      thermometer:
+        - pointer-events: none
+        - z-index: 0
+  - type: conditional
+    conditions:
+      - entity: input_boolean.show_heating_controls
+        state: "on"
+    card:
+      type: vertical-stack
+      cards:
+        - type: custom:button-card
+          show_name: false
+          show_icon: false
+          show_state: false
+          styles:
+            card:
+              - height: 50px
+              - background: transparent
+              - box-shadow: none
+              - border: none
+        - type: custom:button-card
+          entity: input_number.heating_temp
+          show_name: false
+          show_icon: false
+          show_state: true
+          state_display: <b>+</b>
+          styles:
+            card:
+              - width: 50px
+              - height: 50px
+              - border-radius: 12px
+              - display: flex
+              - justify-content: center
+              - align-items: center
+              - font-size: 34px
+              - background: transparent
+              - border: |
+                  [[[
+                    const temp = parseFloat(entity.state);
+                    if (temp <= 5) return "2px solid #5a9eff";
+                    if (temp <= 7) return "2px solid #6aaeff";
+                    if (temp <= 9) return "2px solid #7abfff";
+                    if (temp <= 11) return "2px solid #8acfff";
+                    if (temp <= 13) return "2px solid #9adfff";
+                    if (temp <= 15) return "2px solid #aadfff";
+                    if (temp <= 17) return "2px solid #b8e6b8";
+                    if (temp <= 19) return "2px solid #c6eca6";
+                    if (temp <= 21) return "2px solid #d4f294";
+                    if (temp <= 23) return "2px solid #f2e68c";
+                    if (temp <= 25) return "2px solid #ffb464";
+                    return "2px solid #ff8c64";
+                  ]]]
+              - box-shadow: |
+                  [[[
+                    const temp = parseFloat(entity.state);
+                    if (temp <= 5) return "0 0 10px #5a9eff";
+                    if (temp <= 7) return "0 0 10px #6aaeff";
+                    if (temp <= 9) return "0 0 10px #7abfff";
+                    if (temp <= 11) return "0 0 10px #8acfff";
+                    if (temp <= 13) return "0 0 10px #9adfff";
+                    if (temp <= 15) return "0 0 10px #aadfff";
+                    if (temp <= 17) return "0 0 10px #b8e6b8";
+                    if (temp <= 19) return "0 0 10px #c6eca6";
+                    if (temp <= 21) return "0 0 10px #d4f294";
+                    if (temp <= 23) return "0 0 10px #f2e68c";
+                    if (temp <= 25) return "0 0 10px #ffb464";
+                    return "0 0 10px #ff8c64";
+                  ]]]
+          tap_action:
+            action: call-service
+            service: input_number.increment
+            service_data:
+              entity_id: input_number.heating_temp
+        - type: custom:button-card
+          entity: input_number.heating_temp
+          show_name: false
+          show_icon: false
+          show_state: true
+          state_display: |
+            [[[ return Math.round(entity.state) + '°C'; ]]]
+          styles:
+            card:
+              - width: 50px
+              - height: 50px
+              - border-radius: 12px
+              - display: flex
+              - justify-content: center
+              - align-items: center
+              - font-size: 18px
+              - font-weight: bold
+              - background: transparent
+              - border: |
+                  [[[
+                    const temp = parseFloat(entity.state);
+                    if (temp <= 5) return "2px solid #5a9eff";
+                    if (temp <= 7) return "2px solid #6aaeff";
+                    if (temp <= 9) return "2px solid #7abfff";
+                    if (temp <= 11) return "2px solid #8acfff";
+                    if (temp <= 13) return "2px solid #9adfff";
+                    if (temp <= 15) return "2px solid #aadfff";
+                    if (temp <= 17) return "2px solid #b8e6b8";
+                    if (temp <= 19) return "2px solid #c6eca6";
+                    if (temp <= 21) return "2px solid #d4f294";
+                    if (temp <= 23) return "2px solid #f2e68c";
+                    if (temp <= 25) return "2px solid #ffb464";
+                    return "2px solid #ff8c64";
+                  ]]]
+              - box-shadow: |
+                  [[[
+                    const temp = parseFloat(entity.state);
+                    if (temp <= 5) return "0 0 10px #5a9eff";
+                    if (temp <= 7) return "0 0 10px #6aaeff";
+                    if (temp <= 9) return "0 0 10px #7abfff";
+                    if (temp <= 11) return "0 0 10px #8acfff";
+                    if (temp <= 13) return "0 0 10px #9adfff";
+                    if (temp <= 15) return "0 0 10px #aadfff";
+                    if (temp <= 17) return "0 0 10px #b8e6b8";
+                    if (temp <= 19) return "0 0 10px #c6eca6";
+                    if (temp <= 21) return "0 0 10px #d4f294";
+                    if (temp <= 23) return "0 0 10px #f2e68c";
+                    if (temp <= 25) return "0 0 10px #ffb464";
+                    return "0 0 10px #ff8c64";
+                  ]]]
+            state:
+              - color: |
+                  [[[
+                    const temp = parseFloat(entity.state);
+                    if (temp <= 5) return "#5a9eff";
+                    if (temp <= 7) return "#6aaeff";
+                    if (temp <= 9) return "#7abfff";
+                    if (temp <= 11) return "#8acfff";
+                    if (temp <= 13) return "#9adfff";
+                    if (temp <= 15) return "#aadfff";
+                    if (temp <= 17) return "#b8e6b8";
+                    if (temp <= 19) return "#c6eca6";
+                    if (temp <= 21) return "#d4f294";
+                    if (temp <= 23) return "#f2e68c";
+                    if (temp <= 25) return "#ffb464";
+                    return "#ff8c64";
+                  ]]]
+          tap_action:
+            action: none
+        - type: custom:button-card
+          entity: input_number.heating_temp
+          show_name: false
+          show_icon: false
+          show_state: true
+          state_display: <b>-</b>
+          styles:
+            card:
+              - width: 50px
+              - height: 50px
+              - border-radius: 12px
+              - display: flex
+              - justify-content: center
+              - align-items: center
+              - font-size: 44px
+              - font-weight: bold
+              - background: transparent
+              - border: |
+                  [[[
+                    const temp = parseFloat(entity.state);
+                    if (temp <= 5) return "2px solid #5a9eff";
+                    if (temp <= 7) return "2px solid #6aaeff";
+                    if (temp <= 9) return "2px solid #7abfff";
+                    if (temp <= 11) return "2px solid #8acfff";
+                    if (temp <= 13) return "2px solid #9adfff";
+                    if (temp <= 15) return "2px solid #aadfff";
+                    if (temp <= 17) return "2px solid #b8e6b8";
+                    if (temp <= 19) return "2px solid #c6eca6";
+                    if (temp <= 21) return "2px solid #d4f294";
+                    if (temp <= 23) return "2px solid #f2e68c";
+                    if (temp <= 25) return "2px solid #ffb464";
+                    return "2px solid #ff8c64";
+                  ]]]
+              - box-shadow: |
+                  [[[
+                    const temp = parseFloat(entity.state);
+                    if (temp <= 5) return "0 0 10px #5a9eff";
+                    if (temp <= 7) return "0 0 10px #6aaeff";
+                    if (temp <= 9) return "0 0 10px #7abfff";
+                    if (temp <= 11) return "0 0 10px #8acfff";
+                    if (temp <= 13) return "0 0 10px #9adfff";
+                    if (temp <= 15) return "0 0 10px #aadfff";
+                    if (temp <= 17) return "0 0 10px #b8e6b8";
+                    if (temp <= 19) return "0 0 10px #c6eca6";
+                    if (temp <= 21) return "0 0 10px #d4f294";
+                    if (temp <= 23) return "0 0 10px #f2e68c";
+                    if (temp <= 25) return "0 0 10px #ffb464";
+                    return "0 0 10px #ff8c64";
+                  ]]]
+          tap_action:
+            action: call-service
+            service: input_number.decrement
+            service_data:
+              entity_id: input_number.heating_temp
+      style: |
+        ha-card {
+          width: 60px;
+          height: 310px;
+          background: rgba(0,0,0,0.3);
+          border-radius: 12px;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+          align-items: center;
+          gap: 8px;
+          position: relative;
+          z-index: 10;
+          pointer-events: auto;
+        }
+grid_options:
+  columns: 6
+  rows: 5
